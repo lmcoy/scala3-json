@@ -20,7 +20,7 @@ object Parser {
     }
   }
 
-  final def parseElement(tokens: List[Token]): Either[Error, Result] = {
+  private def parseElement(tokens: List[Token]): Either[Error, Result] = {
     tokens match 
     case Nil => Left(Error("unexpected end", -1, -1))
     case Token.Str(value,_) :: ts => Right(Result(JsonString(value), ts))
@@ -31,20 +31,22 @@ object Parser {
   }
 
   @tailrec
-  final def parseObject(tokens:List[Token],acc: List[(String, JsonValue)]): Either[Error, Result] = {
+  private def parseObject(tokens:List[Token],acc: List[(String, JsonValue)]): Either[Error, Result] = {
       tokens match 
-      case Nil => ??? // error
+      case Nil => Left(Error("unexpected EOF in object", -1, -1))
       case Token.Str(field, p) :: ts =>
         lazy val line = p.map(_.line).getOrElse(-1)
         lazy val col = p.map(_.col + field.length).getOrElse(-1)
         ts match 
         case Nil => Left(Error(s"expected `:`", line, col)) 
-        case Token.Colon(_) :: ts2 =>
+        case Token.Colon(p) :: ts2 =>
             parseElement(ts2) match
             case Left(e) => Left(e)
             case Right(r) => 
+                lazy val line = p.map(_.line).getOrElse(-1)
+                lazy val col = p.map(_.col).getOrElse(-1)
                 r.unparsed match 
-                case Nil => ???
+                case Nil => Left(Error("unexpected EOF, expected `:`", line, col))
                 case Token.Comma(_) :: ts => parseObject(ts, (field, r.jsonValue) :: acc)
                 case Token.RightBrace(_) :: ts => Right(Result(JsonObject(((field, r.jsonValue) :: acc).reverse), ts))
                 case token :: ts => Left(Error("expected , or }", token.line.getOrElse(-1), token.col.getOrElse(-1))) 
@@ -57,19 +59,21 @@ object Parser {
   }
 
   @tailrec
-  final def parseList(tokens: List[Token], acc: List[JsonValue]): Either[Error, Result] = {
+  private def parseList(tokens: List[Token], acc: List[JsonValue]): Either[Error, Result] = {
       tokens match 
-      case Nil => ??? // error
-      case t => 
+      case Nil => Left(Error("unexpect EOF in array", -1, -1))
+      case t :: _ => 
         val result = parseElement(tokens)
         result match 
         case Left(e) => Left(e)
         case Right(r) => 
+            lazy val line = t.line.getOrElse(-1)
+            lazy val col = t.col.getOrElse(-1)
             r.unparsed match
-            case Nil => Left(Error("expected , or ]", 0, 0))
+            case Nil => Left(Error("expected , or ]", line, col))
             case Token.Comma(_) :: ts => parseList(ts, r.jsonValue :: acc)
             case Token.RightBracket(_) :: ts => Right(Result(JsonArray((r.jsonValue :: acc).reverse), ts))
-            case token :: ts => Left(Error("expected , or ]", token.line.getOrElse(-1), token.col.getOrElse(-1)))
+            case token :: _ => Left(Error("expected , or ]", token.line.getOrElse(-1), token.col.getOrElse(-1)))
   }
 
   case class Error(reason: String, line: Int, col: Int) extends Exception(s"error at line $line col $col: $reason")
