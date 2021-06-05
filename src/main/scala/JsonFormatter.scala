@@ -1,3 +1,4 @@
+package json
 
 /** Convert json to string */
 trait JsonFormatter:

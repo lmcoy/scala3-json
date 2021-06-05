@@ -1,8 +1,5 @@
-## sbt project compiled with Scala 3
+# JSON library
 
-### Usage
-
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
-
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
+This repository contains a json library written in scala 3.
+The intention for writing this library was to start using scala 3 and learn 
+about the built-in typeclass derivation, i.e. don't use this library.

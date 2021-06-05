@@ -1,3 +1,5 @@
+package json
+
 import scala.deriving.*
 import scala.CanEqual.derived
 import scala.compiletime.{erasedValue, summonInline}

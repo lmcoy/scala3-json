@@ -1,3 +1,5 @@
+package json
+
 import scala.deriving.*
 import scala.CanEqual.derived
 import scala.compiletime.{erasedValue, summonInline, constValue}
@@ -6,52 +8,55 @@ import scala.compiletime.{erasedValue, summonInline, constValue}
  * Typeclass to decode a [[JsonValue]] to scala object
  */
 trait JsonDecoder[A]:
-    def decode(json: JsonValue): Either[Throwable, A]
+    def decode(json: JsonValue): Either[JsonDecoder.Error, A]
 
 
 /**
  * Convert the [[JsonValue]] to a scala object of type `A`. 
  */
-extension (json: JsonValue) def as[A](using decoder: JsonDecoder[A]): Either[Throwable,A] = {
+extension (json: JsonValue) def as[A](using decoder: JsonDecoder[A]): Either[JsonDecoder.Error,A] = {
     decoder.decode(json)
 }
 
 object JsonDecoder:
     import JsonValue._
+
+    case class Error(msg: String) extends RuntimeException(msg)
+
     given JsonDecoder[BigInt] with
-        def decode(json: JsonValue): Either[Throwable, BigInt] = {
+        def decode(json: JsonValue): Either[Error, BigInt] = {
             json match
                 case JsonInt(i) => Right(i)
-                case _ => Left(new Exception("wrong format"))
+                case _ => Left(Error(s"cannot convert ${json.getClass.getCanonicalName} to BigInt"))
         }
 
     
     given JsonDecoder[Int] with
-        def decode(json: JsonValue): Either[Throwable, Int] = {
+        def decode(json: JsonValue): Either[Error, Int] = {
             json match
-                case JsonInt(i) => if i.isValidInt then Right(i.toInt) else Left(new Exception(s"value doesn't fit into Int: $i"))
-                case _ => Left(new Exception("wrong format"))
+                case JsonInt(i) => if i.isValidInt then Right(i.toInt) else Left(Error(s"value doesn't fit into Int: $i"))
+                case _ => Left(Error(s"cannot convert ${json.getClass.getCanonicalName} to Int"))
         }
 
     given JsonDecoder[String] with
-        def decode(json:JsonValue) : Either[Throwable, String] = {
+        def decode(json:JsonValue) : Either[Error, String] = {
             json match
                 case JsonString(s) => Right(s)
-                case _ => Left(new Exception("wrong format"))
+                case _ => Left(Error(s"cannot convert ${json.getClass.getCanonicalName} to String"))
         }
 
     given listDecoder[A](using elementDecoder: JsonDecoder[A]): JsonDecoder[List[A]] with
-        def decode(json: JsonValue): Either[Throwable, List[A]] = {
+        def decode(json: JsonValue): Either[Error, List[A]] = {
             json match 
                 case JsonArray(elements) =>
-                    elements.foldRight[Either[Throwable, List[A]]](Right(List.empty[A])){case (a, acc) => 
+                    elements.foldRight[Either[Error, List[A]]](Right(List.empty[A])){case (a, acc) => 
                         acc.flatMap{l => 
                             elementDecoder.decode(a) match
                                 case Left(ex) => Left(ex)
                                 case Right(decoded) => Right(decoded :: l)
                         }
                     }
-                case _ => Left(new Exception("expected List"))
+                case _ => Left(Error("expected List"))
         }
     
     /**
@@ -84,16 +89,16 @@ object JsonDecoder:
         inline m match {
         case p: Mirror.ProductOf[A] =>
             new JsonDecoder[A] {
-               def decode(json: JsonValue): Either[Throwable, A] = {
+               def decode(json: JsonValue): Either[Error, A] = {
                    json match {
                        case JsonObject(fields) =>
                        val maybeElements = elemLabels.zip(decoders).map{ case (label,decoder) =>
                                 fields
                                     .toMap
                                     .get(label)
-                                    .toRight(new Exception(s"object has no field $label"))
+                                    .toRight(Error(s"object has no field $label"))
                                     .flatMap(value => decoder.decode(value))
-                       }.foldRight[Either[Throwable, List[Any]]](Right(List.empty[Any])){case (a, acc) => 
+                       }.foldRight[Either[Error, List[Any]]](Right(List.empty[Any])){case (a, acc) => 
                             acc.flatMap{l => 
                                 a match
                                     case Left(ex) => Left(ex)
@@ -108,7 +113,7 @@ object JsonDecoder:
                             }
                             p.fromProduct(product)
                         }
-                       case _ => Left(new Exception("expected object"))
+                       case _ => Left(Error("expected object"))
                    }
                }
             }

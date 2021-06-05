@@ -1,3 +1,5 @@
+package json
+
 /** Representation of json */
 enum JsonValue:
   case JsonString(s: String)

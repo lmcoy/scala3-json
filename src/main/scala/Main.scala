@@ -1,3 +1,4 @@
+import json._
 
 case class Address(street: String, city: String) extends Product
 
