@@ -73,6 +73,11 @@ class TokenizerSpec extends AnyFlatSpec {
      numberToken(".1E-4") should equal ((5, Token.RationalNumber(".1E-4")))
   }
 
+  "string" should "tokenize a string" in {
+    Tokenizer("\"hello\"").string(0) should equal (Right((7, Token.Str("hello"))))
+    Tokenizer(""""h\"el\nlo"""").string(0) should equal (Right((11, Token.Str("h\"el\nlo"))))
+  }
+
   "xxx" should "xxx" in {
       val tokenizer = Tokenizer(
           """

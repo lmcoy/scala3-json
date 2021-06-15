@@ -36,7 +36,8 @@ class Tokenizer(str: String) {
                         case '"' =>
                             val s = string(offset)
                             s match
-                                case Left(error) => Left(error.copy(line=line, col=col))
+                                case Left(error) => 
+                                    Left(error.copy(line=line, col=col+error.col))
                                 case Right(o) => tokenize(o._1, Right(o._2.copy(pos = Some(Position(line,col))) :: tokens), line, col+(o._1-offset))
                         case 't' if offset + 4 < str.length && str.substring(offset, offset+4) == "true" => 
                             tokenize(offset + 4, Right(Token.True(Some(Position(line, col))) :: tokens),line, col+4)
@@ -108,21 +109,51 @@ class Tokenizer(str: String) {
         val acc = StringBuffer()
 
         @tailrec
-        def go(o: Int): Option[Int] = {
-            if (o >= str.length) None
+        def go(o: Int): Either[Error, Int] = {
+            def error(msg: String) = Left(Error(msg, 0, o - offset))
+            if (o >= str.length) error("unexpected end of string")
             else {
                 val codePoint = str.codePointAt(o)
                 val nextOffset = o + Character.charCount(codePoint)
                 codePoint match
                     case '\\' => 
-                        acc.appendCodePoint(codePoint)
-                        if (nextOffset >= str.length) {
+                        if (nextOffset < str.length) {
                             val c = str.codePointAt(nextOffset)
-                            acc.appendCodePoint(c)
-                            go(nextOffset+Character.charCount(c))
-                        } else None
-                    case '"' => Some(o + 1)
-                    case c if c < ' ' => None
+                            c match 
+                            case 'n' =>
+                                acc.appendCodePoint('\n')
+                                go(nextOffset+Character.charCount(c))
+                            case '"' =>
+                                acc.appendCodePoint('"')
+                                go(nextOffset+Character.charCount(c))
+                            case 't' =>
+                                acc.appendCodePoint('\t')
+                                go(nextOffset+Character.charCount(c))
+                            case 'r' =>
+                                acc.appendCodePoint('\r')
+                                go(nextOffset+Character.charCount(c))
+                            case 'b' =>
+                                acc.appendCodePoint('\b')
+                                go(nextOffset+Character.charCount(c))
+                            case 'f' =>
+                                acc.appendCodePoint('\f')
+                                go(nextOffset+Character.charCount(c))
+                            case '\\' =>
+                                acc.appendCodePoint('\\')
+                                go(nextOffset+Character.charCount(c))
+                            case 'u' =>
+                                val startIndex = nextOffset+Character.charCount(c)
+                                val endIndex = startIndex + 4
+                                if (endIndex <= str.length) then
+                                    val hex = str.substring(startIndex, endIndex)
+                                    if "[0-9a-fA-F]{4}".r.matches(hex) then
+                                        acc.appendCodePoint(Integer.parseInt(hex, 16))
+                                        go(endIndex)
+                                    else error(s"invalid unicode \\u$hex")
+                                else error("unexpected end of string in \\uxxxx")
+                        } else error("unexpected end of string, incomplete control char \\")
+                    case '"' => Right(o + 1)
+                    case c if c < ' ' => error("control char in string")
                     case _ => 
                         acc.appendCodePoint(codePoint)
                         go(nextOffset)
@@ -130,9 +161,7 @@ class Tokenizer(str: String) {
         }
 
         if (offset >= str.length) Left(Error("does not start with \"", 0, 0))
-        else go(offset+1) match
-            case Some(o) => Right((o,Token.Str(acc.toString)))
-            case None => Left(Error("unexpected end of string", 0, 0))
+        else go(offset+1).map(o => (o,Token.Str(acc.toString))) 
     }
 
 }

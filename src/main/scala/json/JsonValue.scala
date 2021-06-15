@@ -7,3 +7,4 @@ enum JsonValue:
   case JsonBoolean(b: Boolean)
   case JsonObject(fields: List[(String, JsonValue)])
   case JsonArray(values: List[JsonValue])
+  case JsonNull

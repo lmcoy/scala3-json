@@ -22,6 +22,9 @@ object JsonEncoder:
   given JsonEncoder[Boolean] with
     def toJsonI(b: Boolean): JsonValue = JsonBoolean(b)
 
+  given optionEncoder[A](using a: JsonEncoder[A]): JsonEncoder[Option[A]] with
+    def toJsonI(o: Option[A]): JsonValue = o.map(_.toJson).getOrElse(JsonNull)
+
   given listEncoder[A](using a: JsonEncoder[A]): JsonEncoder[List[A]] with
     def toJsonI(l: List[A]): JsonValue = JsonArray(l.map(a => a.toJson))
 

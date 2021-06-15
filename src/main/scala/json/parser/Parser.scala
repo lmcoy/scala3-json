@@ -7,6 +7,9 @@ import scala.annotation.tailrec
 
 object Parser {
 
+  /**
+   * Parse the json in string `s` into `JsonValue`.
+   */
   final def parse(s: String): Either[Error, JsonValue] = {
     val tokenizer = Tokenizer(s)
     val result = for {
@@ -78,5 +81,5 @@ object Parser {
 
   case class Error(reason: String, line: Int, col: Int) extends Exception(s"error at line $line col $col: $reason")
 
-  case class Result(jsonValue: JsonValue, unparsed: List[Token])
+  private case class Result(jsonValue: JsonValue, unparsed: List[Token])
 }

@@ -53,6 +53,7 @@ object JsonFormatter:
         case JsonBoolean(b) => if (b) "true" else "false"
         case JsonArray(l) => l.map(format).mkString("[",",","]")
         case JsonObject(fields) => fields.map{ (name, value) => s"""${toEscapedJsonString(name)}:${format(value)}"""}.mkString("{",",","}")
+        case JsonNull => "null"
 
   object Minimal extends Minimal:
     given minimalFormatter: JsonFormatter = this
@@ -94,7 +95,8 @@ object JsonFormatter:
             sb.append(toEscapedJsonString(name))
             sb.append(": ")
             formatWithLevel(value, level+1, sb)
-          }, "}")(fields)
+          }, "}")(fields.filter{ case (_,jsonValue) => jsonValue match {case JsonNull => false case _ => true}})
+        case JsonNull => sb.append("null")
     end formatWithLevel
   end Indent
 
