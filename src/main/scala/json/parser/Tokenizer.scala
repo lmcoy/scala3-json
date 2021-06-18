@@ -18,6 +18,11 @@ class Tokenizer(str: String) {
                 case Right(tokens) =>
                     inline def f(x: Option[Position] => Token) = Right(x(Some(Position(line, col))):: tokens)
                     inline def g(x: Option[Position] => Token) = tokenize(nextOffset, f(x), line, col+1) 
+                    inline def addPositionToNumber(x: Token.IntegerNumber | Token.RationalNumber) = 
+                        val pos = Some(Position(line,col)) 
+                        x match 
+                            case i: Token.IntegerNumber => i.copy(pos = pos)
+                            case r: Token.RationalNumber => r.copy(pos = pos)
                     codePoint match
                         case '{' => g(Token.LeftBrace.apply)
                         case '}' => g(Token.RightBrace.apply)
@@ -31,7 +36,7 @@ class Tokenizer(str: String) {
                         case c if c == '-' || c == '+' || c == '.' || Character.isDigit(c) =>
                             val maybeNumber = number(offset)
                             maybeNumber match
-                                case Some(number) => tokenize(number._1, Right(number._2 :: tokens), line, col+(number._1-offset))
+                                case Some(number) => tokenize(number._1, Right(addPositionToNumber(number._2) :: tokens), line, col+(number._1-offset))
                                 case None => Left(Error("could not parse number", line, col))
                         case '"' =>
                             val s = string(offset)
@@ -101,6 +106,7 @@ class Tokenizer(str: String) {
         val (offFinal, exponent) = f(offExp, false, false, Character.toLowerCase(_) == 'e', signedInteger)
 
         if(!number && !fraction) None
+        else if (acc.toString == ".") None
         else if (!fraction && !exponent) Some((offFinal,Token.IntegerNumber(acc.toString)))
         else Some((offFinal, Token.RationalNumber(acc.toString)))
     }
@@ -160,7 +166,7 @@ class Tokenizer(str: String) {
             }
         }
 
-        if (offset >= str.length) Left(Error("does not start with \"", 0, 0))
+        if (str.codePointAt(offset) != '"') Left(Error("does not start with \"", 0, 0))
         else go(offset+1).map(o => (o,Token.Str(acc.toString))) 
     }
 

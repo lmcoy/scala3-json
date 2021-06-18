@@ -45,6 +45,13 @@ object JsonDecoder:
                 case _ => Left(Error(s"cannot convert ${json.getClass.getCanonicalName} to String"))
         }
 
+    given JsonDecoder[Boolean] with
+        def decode(json: JsonValue): Either[Error, Boolean] = {
+            json match
+                case JsonBoolean(b) => Right(b)
+                case _ => Left(Error(s"cannot convert ${json.getClass.getCanonicalName} to Boolean"))
+        }
+
     given listDecoder[A](using elementDecoder: JsonDecoder[A]): JsonDecoder[List[A]] with
         def decode(json: JsonValue): Either[Error, List[A]] = {
             json match 
