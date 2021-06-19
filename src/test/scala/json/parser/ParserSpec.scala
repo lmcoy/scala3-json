@@ -95,4 +95,61 @@ class ParserSpec extends AnyFlatSpec {
           e.line should equal (0)
         case Right(r) => fail(s"expected failure but got $r")
     }
+
+    it should "fail when a , is missing in array" in {
+      Parser.parse("[4 5]") match 
+        case Left(e) =>
+          e.getMessage should equal ("error at line 0 col 3: expected , or ]")
+          e.reason should equal ("expected , or ]")
+          e.col should equal (3)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
+    }
+
+    it should "parse an empty object" in {
+      Parser.parse("{}") match
+        case Left(e) => fail(s"expected successs, got $e")
+        case Right(r) =>
+          r should equal(JsonObject(Nil))
+    }
+
+    it should "fail when a } is missing" in {
+      Parser.parse("{ \"a\": 4 ") match 
+        case Left(e) =>
+          e.getMessage should equal ("error at line 0 col 5: unexpected EOF, expected `,` or `}`")
+          e.reason should equal ("unexpected EOF, expected `,` or `}`")
+          e.col should equal (5)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
+    }
+
+    it should "fail when the field name is not a string" in {
+      Parser.parse("{ 5: 4 }") match 
+        case Left(e) =>
+          e.getMessage should equal ("error at line 0 col 2: expected string as field name")
+          e.reason should equal ("expected string as field name")
+          e.col should equal (2)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
+    }
+
+    it should "fail when a colon is missing" in {
+      Parser.parse("{ \"a\": 5, \"b\" 4 }") match 
+        case Left(e) =>
+          e.getMessage should equal ("error at line 0 col 14: expected `:`")
+          e.reason should equal ("expected `:`")
+          e.col should equal (14)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
+    }
+
+    it should "fail when a comma is missing" in {
+      Parser.parse("{ \"a\": 5 \"b\": 4 }") match 
+        case Left(e) =>
+          e.getMessage should equal ("error at line 0 col 9: expected `,` or `}`")
+          e.reason should equal ("expected `,` or `}`")
+          e.col should equal (9)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
+    }
 }

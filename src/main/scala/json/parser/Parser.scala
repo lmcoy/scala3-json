@@ -49,16 +49,16 @@ object Parser {
                 lazy val line = p.map(_.line).getOrElse(-1)
                 lazy val col = p.map(_.col).getOrElse(-1)
                 r.unparsed match 
-                case Nil => Left(Error("unexpected EOF, expected `:`", line, col))
+                case Nil => Left(Error("unexpected EOF, expected `,` or `}`", line, col))
                 case Token.Comma(_) :: ts => parseObject(ts, (field, r.jsonValue) :: acc)
                 case Token.RightBrace(_) :: ts => Right(Result(JsonObject(((field, r.jsonValue) :: acc).reverse), ts))
-                case token :: ts => Left(Error("expected , or }", token.line.getOrElse(-1), token.col.getOrElse(-1))) 
+                case token :: ts => Left(Error("expected `,` or `}`", token.line.getOrElse(-1), token.col.getOrElse(-1))) 
         case t :: ts2 =>
-            Left(Error(s"expected `:` but got $t", t.line.getOrElse(-1), t.col.getOrElse(-1)))
+            Left(Error(s"expected `:`", t.line.getOrElse(-1), t.col.getOrElse(-1)))
       case Token.RightBrace(_) :: ts if acc.length == 0 =>
         Right(Result(JsonObject(Nil), ts))
       case t :: ts =>
-        Left(Error(s"expected string as field name but got $t", t.line.getOrElse(-1), t.col.getOrElse(-1)))
+        Left(Error(s"expected string as field name", t.line.getOrElse(-1), t.col.getOrElse(-1)))
   }
 
   @tailrec
