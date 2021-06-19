@@ -125,28 +125,17 @@ class Tokenizer(str: String) {
                     case '\\' => 
                         if (nextOffset < str.length) {
                             val c = str.codePointAt(nextOffset)
+                            inline def appendAndNext(char: Int) = 
+                                acc.appendCodePoint(char)
+                                go(nextOffset+Character.charCount(c))
                             c match 
-                            case 'n' =>
-                                acc.appendCodePoint('\n')
-                                go(nextOffset+Character.charCount(c))
-                            case '"' =>
-                                acc.appendCodePoint('"')
-                                go(nextOffset+Character.charCount(c))
-                            case 't' =>
-                                acc.appendCodePoint('\t')
-                                go(nextOffset+Character.charCount(c))
-                            case 'r' =>
-                                acc.appendCodePoint('\r')
-                                go(nextOffset+Character.charCount(c))
-                            case 'b' =>
-                                acc.appendCodePoint('\b')
-                                go(nextOffset+Character.charCount(c))
-                            case 'f' =>
-                                acc.appendCodePoint('\f')
-                                go(nextOffset+Character.charCount(c))
-                            case '\\' =>
-                                acc.appendCodePoint('\\')
-                                go(nextOffset+Character.charCount(c))
+                            case 'n' => appendAndNext('\n')
+                            case '"' => appendAndNext('\"')
+                            case 't' => appendAndNext('\t')
+                            case 'r' => appendAndNext('\r')
+                            case 'b' => appendAndNext('\b')
+                            case 'f' => appendAndNext('\f')
+                            case '\\' => appendAndNext('\\')
                             case 'u' =>
                                 val startIndex = nextOffset+Character.charCount(c)
                                 val endIndex = startIndex + 4

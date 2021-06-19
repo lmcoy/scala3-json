@@ -65,18 +65,21 @@ object Parser {
   private def parseList(tokens: List[Token], acc: List[JsonValue]): Either[Error, Result] = {
       tokens match 
       case Nil => Left(Error("unexpect EOF in array", -1, -1))
-      case t :: _ => 
-        val result = parseElement(tokens)
-        result match 
-        case Left(e) => Left(e)
-        case Right(r) => 
-            lazy val line = t.line.getOrElse(-1)
-            lazy val col = t.col.getOrElse(-1)
-            r.unparsed match
-            case Nil => Left(Error("expected , or ]", line, col))
-            case Token.Comma(_) :: ts => parseList(ts, r.jsonValue :: acc)
-            case Token.RightBracket(_) :: ts => Right(Result(JsonArray((r.jsonValue :: acc).reverse), ts))
-            case token :: _ => Left(Error("expected , or ]", token.line.getOrElse(-1), token.col.getOrElse(-1)))
+      case t :: rest =>
+        t match 
+        case Token.RightBracket(_) => Right(Result(JsonArray(Nil), rest))
+        case _ =>
+          val result = parseElement(tokens)
+          result match 
+          case Left(e) => Left(e)
+          case Right(r) => 
+              lazy val line = t.line.getOrElse(-1)
+              lazy val col = t.col.getOrElse(-1)
+              r.unparsed match
+              case Nil => Left(Error("expected , or ]", line, col))
+              case Token.Comma(_) :: ts => parseList(ts, r.jsonValue :: acc)
+              case Token.RightBracket(_) :: ts => Right(Result(JsonArray((r.jsonValue :: acc).reverse), ts))
+              case token :: _ => Left(Error("expected , or ]", token.line.getOrElse(-1), token.col.getOrElse(-1)))
   }
 
   case class Error(reason: String, line: Int, col: Int) extends Exception(s"error at line $line col $col: $reason")

@@ -63,8 +63,36 @@ class ParserSpec extends AnyFlatSpec {
         
         result match
           case Left(e) => 
-            println(e.getMessage)
             e.getMessage should equal ("error at line 0 col 2: control char in string")
           case Right(r) => fail(s"expected failure $r")
+    }
+
+    it should "parse an array" in {
+      val json = "[4, 6, 9, 3]"
+      val result = Parser.parse(json)
+
+      result match
+        case Left(e) => fail(s"expected success, got $e")
+        case Right(r) =>
+          r should equal (JsonArray(List(JsonInt(4), JsonInt(6), JsonInt(9), JsonInt(3))))
+    }
+
+    it should "parse an empty array" in {
+      Parser.parse("[]") match
+        case Left(e) => fail(s"expected successs, got $e")
+        case Right(r) =>
+          r should equal(JsonArray(Nil))
+    }
+
+    it should "fail when a closing ] is missing" in {
+      val json = "[4, 5, 7"
+      
+      Parser.parse(json) match
+        case Left(e) => 
+          e.getMessage should equal ("error at line 0 col 7: expected , or ]")
+          e.reason should equal ("expected , or ]")
+          e.col should equal (7)
+          e.line should equal (0)
+        case Right(r) => fail(s"expected failure but got $r")
     }
 }
